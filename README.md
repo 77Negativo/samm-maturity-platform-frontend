@@ -1,107 +1,53 @@
 # SAMM Maturity Platform Frontend
 
-Repositório dedicado da SPA React do sistema.
+Frontend React da plataforma de maturidade SAMM.
 
-Este repositório é a origem oficial de:
+Este repositório contém a SPA, a camada de consumo HTTP e a configuração de runtime no nginx.
 
-- interface React
-- navegação e páginas do sistema
-- componentes reutilizáveis
-- integração HTTP com o backend
-- proxy reverso `/api` via nginx
+## O que este repositório faz
 
-Arquivos de governança local:
+- entrega a interface do produto
+- centraliza chamadas HTTP em `src/api.js`
+- mantém o proxy `/api` para integração com o backend
+- empacota a aplicação com Vite e Docker
 
-- [AGENTS.md](/home/drolen/GitHub/77Negativo/samm-maturity-platform-frontend/AGENTS.md)
-- [POLICY.md](/home/drolen/GitHub/77Negativo/samm-maturity-platform-frontend/POLICY.md)
-
-Documentação detalhada:
-
-- [documentacao/README.md](/home/drolen/GitHub/77Negativo/samm-maturity-platform-frontend/documentacao/README.md)
-
-## Responsabilidades
-
-- build do frontend com Vite
-- entrega dos assets estáticos
-- proxy reverso de `/api` para o backend
-
-## Relação com o backend
-
-O sistema agora opera em dois repositórios:
+## Repositórios relacionados
 
 - frontend: `samm-maturity-platform-frontend`
 - backend: `samm-maturity-platform-backend`
 
-Regras de integração:
+## Requisitos
 
-- este repositório não é dono da regra de negócio
-- dados de domínio e score oficial vêm do backend
-- chamadas HTTP devem passar por `src/api.js`
-- mudanças de contrato HTTP exigem sincronização com o backend
+- Node.js 20+ para desenvolvimento local
+- Docker e Docker Compose para o runtime de contêiner
 
-## Estrutura funcional
+## Rodando localmente
 
-- `src/main.jsx`: bootstrap da SPA
-- `src/api.js`: cliente HTTP centralizado
-- `src/context/`: estado compartilhado da aplicação
-- `src/pages/`: páginas de negócio
-- `src/components/`: componentes reutilizáveis
-- `nginx/default.conf.template`: proxy `/api`
-- `nginx/nginx.conf`: runtime do nginx
-- `nginx/docker-entrypoint.sh`: geração da configuração final em runtime
+Instale dependências:
 
-## Estrutura
-
-```text
-src/
-nginx/
-Dockerfile
-docker-compose.yml
-.env.example
-AGENTS.md
-POLICY.md
+```bash
+npm install
 ```
 
-## Subida local
+Gere o build:
 
-1. Ajuste `UPSTREAM_API_URL` se o backend não estiver em `http://host.docker.internal:3000`.
-2. Suba o container:
+```bash
+npm run build
+```
+
+Suba o ambiente com Docker:
 
 ```bash
 docker compose up -d --build
 ```
 
-## Endereço padrão
+Por padrão o frontend expõe:
 
-- frontend: `http://localhost:8080`
+- `http://localhost:8080`
 
-## Fluxo de desenvolvimento
+## Configuração
 
-Fluxo recomendado:
-
-1. subir primeiro o backend no repositório backend
-2. editar frontend neste repositório
-3. rebuildar quando houver impacto no runtime:
-
-```bash
-docker compose up -d --build
-```
-
-4. validar o carregamento:
-
-```bash
-curl http://localhost:8080/
-```
-
-5. validar o proxy:
-
-```bash
-curl -X POST http://localhost:8080/api/auth/login -H 'Content-Type: application/json' -d '{}'
-```
-
-## Ambiente
-
-Variável principal:
+Variável principal de ambiente:
 
 - `UPSTREAM_API_URL`
 
@@ -109,16 +55,28 @@ Valor padrão:
 
 - `http://host.docker.internal:3000`
 
-Esse valor permite que o container do frontend alcance o backend separado em desenvolvimento local.
+Use essa variável para apontar o nginx para o backend correto durante o desenvolvimento.
 
-## Convenções importantes
+## Como colaborar
 
-- não usar `fetch` direto nos componentes
-- não calcular score final no frontend
-- não tratar `localStorage` como fonte de verdade de dados de negócio
-- preservar o fluxo `/api` para manter cookies e CSRF funcionando
+1. Abra uma issue descrevendo a mudança.
+2. Crie uma branch curta e objetiva.
+3. Faça a alteração com foco único.
+4. Rode `npm run build`.
+5. Se a mudança afetar runtime, rode `docker compose up -d --build`.
+6. Abra um pull request com o impacto e a motivação.
 
-## Observações
+Consulte também:
 
-Este repositório pressupõe que o backend já esteja ativo e acessível pela URL definida em `UPSTREAM_API_URL`.
-O runtime do nginx já foi ajustado para funcionar com filesystem `read_only`.
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [SECURITY.md](SECURITY.md)
+
+## Segurança
+
+Este repositório não deve conter segredos, tokens, chaves privadas ou arquivos `.env`.
+O arquivo `.env.example` documenta apenas variáveis públicas de configuração.
+
+## Licença
+
+Licenciado sob [Apache 2.0](LICENSE).
+

@@ -1,8 +1,17 @@
 {
-  "name": "owasp-samm-frontend",
+  "name": "samm-maturity-platform-frontend",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/77Negativo/samm-maturity-platform-frontend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/77Negativo/samm-maturity-platform-frontend/issues"
+  },
+  "homepage": "https://github.com/77Negativo/samm-maturity-platform-frontend#readme",
   "scripts": {
     "build": "vite build",
     "preview": "vite preview --host"
