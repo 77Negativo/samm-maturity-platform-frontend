@@ -1,0 +1,82 @@
+name: Deploy frontend image from Docker Hub
+
+on:
+  workflow_run:
+    workflows:
+      - Security Scanner
+      - .github/workflows/security-scan.yml
+    branches:
+      - main
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: samm-frontend-ci-${{ github.event.workflow_run.head_branch || github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: dro13n/samm-maturity-platform-frontend
+  K8S_NAMESPACE: ${{ vars.K8S_NAMESPACE || 'samm-maturity' }}
+  K8S_DEPLOYMENT: samm-frontend
+  UPSTREAM_API_URL: http://samm-backend.samm-maturity.svc.cluster.local:3000
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: k8s-onprem-runners
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKDIR="$RUNNER_TEMP/samm-frontend-src"
+          HOME_DIR="$RUNNER_TEMP/github-home"
+          DEPLOY_SHA="${{ github.event.workflow_run.head_sha }}"
+          : "${GITHUB_TOKEN:?GITHUB_TOKEN is required}"
+          mkdir -p "$HOME_DIR"
+          trap 'rm -rf "$HOME_DIR"' EXIT
+          export HOME="$HOME_DIR"
+          printf 'machine github.com\nlogin x-access-token\npassword %s\n' "$GITHUB_TOKEN" > "$HOME_DIR/.netrc"
+          chmod 600 "$HOME_DIR/.netrc"
+          rm -rf "$WORKDIR"
+          git -c init.defaultBranch=main init "$WORKDIR"
+          cd "$WORKDIR"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 1 origin "$DEPLOY_SHA"
+          git checkout --detach FETCH_HEAD
+          echo "WORKDIR=$WORKDIR" >> "$GITHUB_ENV"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Prepare kubeconfig
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${KUBECONFIG_B64:-}" ]; then
+            mkdir -p "$RUNNER_TEMP/kubeconfig"
+            printf '%s' "$KUBECONFIG_B64" | base64 -d > "$RUNNER_TEMP/kubeconfig/config"
+            chmod 600 "$RUNNER_TEMP/kubeconfig/config"
+            echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig/config" >> "$GITHUB_ENV"
+          fi
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+
+      - name: Deploy to Kubernetes
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl create namespace "$K8S_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl -n "$K8S_NAMESPACE" create configmap samm-frontend-config \
+            --from-literal=UPSTREAM_API_URL="$UPSTREAM_API_URL" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl -n "$K8S_NAMESPACE" apply -f "$WORKDIR/k8s/base/frontend.yaml"
+          kubectl -n "$K8S_NAMESPACE" set image deployment/"$K8S_DEPLOYMENT" frontend="$IMAGE_NAME:latest"
+          kubectl -n "$K8S_NAMESPACE" rollout restart deployment/"$K8S_DEPLOYMENT"
+          kubectl -n "$K8S_NAMESPACE" rollout status deployment/"$K8S_DEPLOYMENT" --timeout=180s
