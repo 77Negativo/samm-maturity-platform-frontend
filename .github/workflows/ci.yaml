@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows:
       - Security Scanner
+      - .github/workflows/security-scan.yml
     branches:
       - main
     types:
