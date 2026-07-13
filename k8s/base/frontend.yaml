@@ -18,7 +18,7 @@ metadata:
     app.kubernetes.io/name: samm-maturity-platform
     app.kubernetes.io/component: frontend
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   selector:
     app.kubernetes.io/name: samm-maturity-platform
     app.kubernetes.io/component: frontend
